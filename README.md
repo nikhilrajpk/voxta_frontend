@@ -1,80 +1,82 @@
-# Voxta Frontend
-Welcome to the Voxta Frontend repository — the client-side of Voxta, a real-time chat application that connects users based on shared interests. This frontend is built with React and deployed on Vercel.
+# 💬 Voxta Frontend
 
-🌐 Live Demo: https://voxta-frontend.nikhilrajpk.in
-🔗 Backend API: https://voxta-backend.nikhilrajpk.in
+Welcome to the **Voxta Frontend** repository — the client-side of **Voxta**, a real-time chat application that connects users based on shared interests. Built using **React**, styled for responsiveness, and deployed on **Vercel**.
 
- **Features**
-🔐 **User Authentication**: Secure registration and login with JWT tokens.
+- 🌐 **Live Demo**: [voxta-frontend.nikhilrajpk.in](https://voxta-frontend.nikhilrajpk.in)  
+- 🔗 **Backend API**: [voxta-backend.nikhilrajpk.in](https://voxta-backend.nikhilrajpk.in)
 
-💬 **Real-Time Chat**: Seamless messaging using WebSockets.
+---
 
-🎯 **Interest Matching**: Connects users based on mutual interests.
+## 🚀 Features
 
-📱 **Responsive Design**: Works smoothly on desktop and mobile devices.
+- 🔐 **JWT Authentication** – Secure login & registration
+- 💬 **Real-Time Chat** – Powered by WebSockets
+- 🎯 **Interest-Based Matching** – Connect users based on common interests
+- 📱 **Responsive UI** – Optimized for mobile and desktop
+- 🔌 **REST API Integration** – Fetch messages, users, and interests via Axios
 
-🔌 **API Integration**: Fetches users, messages, and interests via RESTful APIs.
+---
 
-🛠️ Tech Stack
-Category	Technology
-Framework	React
-State Management	React Context / Redux (if applicable)
-HTTP Client	Axios
-Real-time Comm.	Native WebSocket
-Styling	CSS / Tailwind CSS (if applicable)
-Deployment	Vercel
-Version Control	Git + GitHub
+## 🧰 Tech Stack
 
-📦 Prerequisites
-Node.js (v18+)
+| Category             | Tech                        |
+|----------------------|-----------------------------|
+| Frontend Framework   | React                       |
+| State Management     | React Context / Redux       |
+| HTTP Client          | Axios                       |
+| Real-Time Comm.      | WebSocket API               |
+| Styling              | CSS / Tailwind CSS *(if used)* |
+| Deployment           | Vercel                      |
+| Version Control      | Git + GitHub                |
 
-npm or Yarn
+---
 
-GitHub account
+## 📦 Prerequisites
 
-Vercel account (for deployment)
+- Node.js `v18+`
+- npm or Yarn
+- GitHub Account
+- Vercel Account
+- Access to [Voxta Backend](https://voxta-backend.nikhilrajpk.in)
 
-Access to the Voxta Backend API
+---
 
-⚙️ Getting Started
-1. Clone the Repository
-bash
-Copy
-Edit
+## ⚙️ Getting Started
+
+```bash
+# Clone the repository
 git clone https://github.com/nikhilrajpk/voxta_frontend.git
 cd voxta_frontend
-2. Install Dependencies
-bash
-Copy
-Edit
-npm install
-3. Configure Environment Variables
-Create a .env file in the root directory:
 
-ini
+# Install dependencies
+npm install
+🔑 Set Environment Variables
+Create a .env file in the root directory and add:
+
+env
 Copy
 Edit
 REACT_APP_API_URL=https://voxta-backend.nikhilrajpk.in/api/
 REACT_APP_WS_URL=wss://voxta-backend.nikhilrajpk.in/ws/chat/
-4. Run Locally
+▶️ Run Locally
 bash
 Copy
 Edit
 npm start
 Visit: http://localhost:3000
 
-5. Build for Production
+📦 Build for Production
 bash
 Copy
 Edit
 npm run build
 Build files will be generated in the build/ directory.
 
-📡 Deployment (Vercel)
+🚀 Deployment on Vercel
 This project is deployed using Vercel with GitHub integration for automatic CI/CD.
 
-Steps to Deploy
-Push to GitHub
+🔧 Setup Steps
+Push code to GitHub:
 
 bash
 Copy
@@ -82,37 +84,30 @@ Edit
 git add .
 git commit -m "Initial commit"
 git push origin main
-Set Up on Vercel
-
 Log in to Vercel
 
-Click "New Project", and import your voxta_frontend repo.
+Click "New Project" → Import your voxta_frontend repo
 
-Configure:
+Configure build settings:
 
-Framework Preset: React
+Option	Value
+Framework Preset	React
+Root Directory	./
+Build Command	npm run build
+Output Directory	build
 
-Root Directory: ./
+Add Environment Variables:
 
-Build Command: npm run build
-
-Output Directory: build
-
-Environment Variables:
-
-ini
+env
 Copy
 Edit
 REACT_APP_API_URL=https://voxta-backend.nikhilrajpk.in/api/
 REACT_APP_WS_URL=wss://voxta-backend.nikhilrajpk.in/ws/chat/
-Custom Domain
-
 Assign your custom domain:
 https://voxta-frontend.nikhilrajpk.in
 
-Automatic Deployments
-
-Every push to main triggers deployment.
+✅ Automatic Deployments
+Every push to main triggers a new deployment.
 
 Pull requests create preview deployments.
 
@@ -121,21 +116,21 @@ bash
 Copy
 Edit
 voxta_frontend/
-├── public/                 # Static assets
+├── public/               # Static assets
 ├── src/
-│   ├── API/                # Axios instance and API calls
-│   ├── components/         # Reusable React components
-│   ├── pages/              # Page components (e.g., Login, Chat)
-│   ├── styles/             # CSS/Tailwind styles
-│   ├── App.js              # Main app component
-│   └── index.js            # Entry point
-├── .env                    # Environment variables
-├── package.json            # Project config and dependencies
-└── README.md               # Project overview (this file)
+│   ├── API/              # Axios instance and API methods
+│   ├── components/       # Reusable React components
+│   ├── pages/            # Page views (Login, Chat, etc.)
+│   ├── styles/           # CSS / Tailwind styles
+│   ├── App.js            # Main app component
+│   └── index.js          # Entry point
+├── .env                  # Environment config
+├── package.json          # Project dependencies
+└── README.md             # Project overview
 🤝 Contributing
-Fork this repository.
+Fork this repository
 
-Create a branch:
+Create a feature branch:
 
 bash
 Copy
@@ -147,21 +142,20 @@ bash
 Copy
 Edit
 git commit -m "Add new feature"
-Push to GitHub:
+Push and open a pull request:
 
 bash
 Copy
 Edit
 git push origin feature-name
-Open a pull request.
-
 🐞 Issues
 Found a bug or want to suggest a feature?
-Submit an issue on the GitHub Issues page.
+Open an issue at GitHub Issues
 
 📄 License
-This project is licensed under the MIT License.
+Licensed under the MIT License
 
 📬 Contact
-Have questions or suggestions?
-Feel free to reach out via nikhilrajpk.in
+Have questions, suggestions, or want to collaborate?
+Reach out at: nikhilrajpk.in
+
