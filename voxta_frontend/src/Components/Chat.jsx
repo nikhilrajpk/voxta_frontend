@@ -49,7 +49,7 @@ function Chat() {
     }
 
     // WebSocket URL format
-    const wsUrl = `ws://voxta-backend.nikhilrajpk.in/ws/chat/?token=${token}`;
+    const wsUrl = `wss://voxta-backend.nikhilrajpk.in/ws/chat/?token=${token}`;
     console.log('Connecting to WebSocket:', wsUrl);
     
     const newSocket = new WebSocket(wsUrl);
