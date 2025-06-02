@@ -74,8 +74,11 @@ function Chat() {
       console.log('WebSocket disconnected:', event.code, event.reason);
       setIsConnected(false);
       
-      if (event.code === 1006) {
-        setError('Connection failed. Please check your authentication.');
+      if (event.code === 4001) {
+        setError('Authentication failed. Please login again.');
+        // Redirect to login or refresh token
+      } else if (event.code === 1006) {
+        setError('Connection failed. Please check your network.');
       } else if (event.code !== 1000) {
         setError('Connection lost. Please refresh the page.');
       }
