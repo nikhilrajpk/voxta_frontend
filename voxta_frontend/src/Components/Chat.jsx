@@ -8,7 +8,7 @@ import {
   selectIsAuthenticated, 
   selectUser,
   selectAuthLoading,
-  addMessage // Import the addMessage action
+  addMessage
 } from '../store/slices/authSlice';
 import { Send, Users, MessageCircle, AlertCircle } from 'lucide-react';
 
@@ -39,7 +39,6 @@ function Chat() {
   useEffect(() => {
     if (!currentUser || !isAuthenticated) return;
 
-    // Get token from localStorage (matches your axios setup)
     const token = localStorage.getItem('access_token');
 
     if (!token) {
@@ -47,7 +46,7 @@ function Chat() {
       return;
     }
 
-    // Use the correct WebSocket URL format
+    // WebSocket URL format
     const wsUrl = `ws://localhost:8000/ws/chat/?token=${token}`;
     console.log('Connecting to WebSocket:', wsUrl);
     
@@ -106,7 +105,7 @@ function Chat() {
       
       case 'message_received':
         console.log('Message received:', data.message);
-        // Add the received message to the state immediately
+        // Add the received message to the state
         if (data.message?.sender?.id && data.message?.receiver?.id) {
           // Determine which user's conversation this message belongs to
           const otherUserId = data.message.sender.id === currentUser?.id 
@@ -122,8 +121,6 @@ function Chat() {
       
       case 'message_sent':
         console.log('Message sent confirmation:', data.message);
-        // The message is already added optimistically, so we don't need to do anything here
-        // unless you want to update the message with server-generated data like timestamp or ID
         break;
       
       case 'typing_indicator':
