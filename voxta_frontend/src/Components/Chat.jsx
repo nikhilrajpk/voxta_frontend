@@ -26,6 +26,8 @@ function Chat() {
   const [isConnected, setIsConnected] = useState(false);
   const [typingUsers, setTypingUsers] = useState({});
   const [error, setError] = useState('');
+  const [unreadMessages, setUnreadMessages] = useState({});
+  const [lastReadMessages, setLastReadMessages] = useState({});
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef({});
 
@@ -96,6 +98,41 @@ function Chat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, selectedUser]);
+
+  useEffect(() => {
+    const newUnreadMessages = {};
+    
+    Object.keys(messages).forEach(userId => {
+      const userMessages = messages[userId] || [];
+      const lastReadMessageId = lastReadMessages[userId];
+      
+      if (userMessages.length > 0) {
+        // If no last read message, consider all messages as potentially unread
+        if (!lastReadMessageId) {
+          // Count messages from other users (not sent by current user)
+          const unreadCount = userMessages.filter(msg => 
+            msg.sender.id !== currentUser?.id
+          ).length;
+          if (unreadCount > 0) {
+            newUnreadMessages[userId] = unreadCount;
+          }
+        } else {
+          // Count messages after the last read message
+          const lastReadIndex = userMessages.findIndex(msg => msg.id === lastReadMessageId);
+          if (lastReadIndex !== -1) {
+            const unreadCount = userMessages.slice(lastReadIndex + 1).filter(msg => 
+              msg.sender.id !== currentUser?.id
+            ).length;
+            if (unreadCount > 0) {
+              newUnreadMessages[userId] = unreadCount;
+            }
+          }
+        }
+      }
+    });
+    
+    setUnreadMessages(newUnreadMessages);
+  }, [messages, lastReadMessages, currentUser]);
 
   const handleWebSocketMessage = (data) => {
     switch (data.type) {
@@ -168,6 +205,24 @@ function Chat() {
   const selectUserChat = async (user) => {
     setSelectedUser(user);
     setError('');
+
+     // Mark messages as read when selecting a chat
+    const userMessages = messages[user.id] || [];
+    if (userMessages.length > 0) {
+      const lastMessage = userMessages[userMessages.length - 1];
+      setLastReadMessages(prev => ({
+        ...prev,
+        [user.id]: lastMessage.id
+      }));
+    }
+    
+    // Clear unread count for this user
+    setUnreadMessages(prev => {
+      const updated = { ...prev };
+      delete updated[user.id];
+      return updated;
+    });
+
     // Load message history
     dispatch(fetchMessageHistory(user.id));
   };
@@ -314,9 +369,22 @@ function Chat() {
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-gray-900">{user.username}</h3>
-                      <p className="text-sm text-gray-600">{user.email}</p>
+                    <div className="flex items-center space-x-3">
+                      {/* Notification dot for unread messages */}
+                      {unreadMessages[user.id] > 0 && (
+                        <div className="relative">
+                          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                          {unreadMessages[user.id] > 1 && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                              {unreadMessages[user.id] > 9 ? '9+' : unreadMessages[user.id]}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="font-medium text-gray-900">{user.username}</h3>
+                        <p className="text-sm text-gray-600">{user.email}</p>
+                      </div>
                     </div>
                     {typingUsers[user.id] && (
                       <div className="text-xs text-indigo-600 font-medium">typing...</div>
