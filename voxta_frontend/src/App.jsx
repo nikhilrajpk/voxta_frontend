@@ -45,7 +45,7 @@ function App() {
         </nav>
         <Routes>
           <Route path="/" element={<Login />} />
-          <Route path="/login" element={isAuthenticated ? <Navigate to={'/dashboard'} /> : <Login />} />
+          <Route path="/login" element={isAuthenticated ? <Navigate to={'/chat'} /> : <Login />} />
           <Route path="/register" element={isAuthenticated ? <Navigate to={'/dashboard'} /> : <Register />} />
           <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to={'/login'} />} />
           <Route path="/browse" element={isAuthenticated ? <BrowseUsers /> : <Navigate to={'/login'}/>} />

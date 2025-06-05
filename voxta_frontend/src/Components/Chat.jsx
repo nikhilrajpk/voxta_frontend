@@ -28,114 +28,120 @@ function Chat() {
   const [error, setError] = useState('');
   const [unreadMessages, setUnreadMessages] = useState({});
   const [lastReadMessages, setLastReadMessages] = useState({});
+  const [processedMessageIds, setProcessedMessageIds] = useState(new Set());
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef({});
+  const reconnectTimeoutRef = useRef(null);
+  const socketRef = useRef(null);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-    dispatch(fetchConnectedUsers());
+    if (!isAuthenticated) return;
+
+    dispatch(fetchConnectedUsers()).then(() => {
+      connectedUsers.forEach(user => {
+        dispatch(fetchMessageHistory(user.id));
+      });
+    });
+
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+    };
   }, [dispatch, isAuthenticated]);
 
   useEffect(() => {
     if (!currentUser || !isAuthenticated) return;
 
     const token = localStorage.getItem('access_token');
-
     if (!token) {
       setError('No authentication token found. Please login again.');
       return;
     }
 
-    // WebSocket URL format
-    const wsUrl = `wss://voxta-backend.nikhilrajpk.in/ws/chat/?token=${token}`;
-    console.log('Connecting to WebSocket:', wsUrl);
-    
-    const newSocket = new WebSocket(wsUrl);
-
-    newSocket.onopen = () => {
-      console.log('WebSocket connected successfully');
-      setIsConnected(true);
-      setError('');
-    };
-
-    newSocket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log('WebSocket message received:', data);
-        handleWebSocketMessage(data);
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
+    const connectWebSocket = () => {
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        console.log('WebSocket already connected, skipping reconnect');
+        return;
       }
-    };
 
-    newSocket.onclose = (event) => {
-      console.log('WebSocket disconnected:', event.code, event.reason);
-      setIsConnected(false);
-      
-      if (event.code === 4001) {
-        setError('Authentication failed. Please login again.');
-        // Redirect to login or refresh token
-      } else if (event.code === 1006) {
-        setError('Connection failed. Please check your network.');
-      } else if (event.code !== 1000) {
-        setError('Connection lost. Please refresh the page.');
+      if (socketRef.current) {
+        console.log('Closing existing WebSocket before reconnecting');
+        socketRef.current.close(1000, 'Reconnecting');
+        socketRef.current = null;
       }
+
+      const wsUrl = `wss://voxta-backend.nikhilrajpk.in/ws/chat/?token=${token}`;
+      console.log('Connecting to WebSocket:', wsUrl);
+      const newSocket = new WebSocket(wsUrl);
+
+      newSocket.onopen = () => {
+        console.log('WebSocket connected successfully');
+        setIsConnected(true);
+        setError('');
+        clearTimeout(reconnectTimeoutRef.current);
+      };
+
+      newSocket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('WebSocket message received:', data);
+          handleWebSocketMessage(data);
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+
+      newSocket.onclose = (event) => {
+        console.log('WebSocket disconnected:', event.code, event.reason);
+        setIsConnected(false);
+        socketRef.current = null;
+        if (event.code === 1006) {
+          setError('Connection failed. Retrying...');
+          attemptReconnect();
+        } else if (event.code !== 1000) {
+          setError('Connection lost. Retrying...');
+          attemptReconnect();
+        }
+      };
+
+      newSocket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setError('Connection error occurred');
+        setIsConnected(false);
+      };
+
+      socketRef.current = newSocket;
+      setSocket(newSocket);
     };
 
-    newSocket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      setError('Connection error occurred');
-      setIsConnected(false);
+    const attemptReconnect = () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      reconnectTimeoutRef.current = setTimeout(() => {
+        console.log('Attempting to reconnect WebSocket...');
+        connectWebSocket();
+      }, 3000);
     };
 
-    setSocket(newSocket);
+    connectWebSocket();
 
     return () => {
       console.log('Cleaning up WebSocket connection');
-      newSocket.close(1000, 'Component unmounting');
+      if (socketRef.current) {
+        socketRef.current.close(1000, 'Component unmounting');
+        socketRef.current = null;
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
     };
   }, [currentUser, isAuthenticated]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, selectedUser]);
-
-  useEffect(() => {
-    const newUnreadMessages = {};
-    
-    Object.keys(messages).forEach(userId => {
-      const userMessages = messages[userId] || [];
-      const lastReadMessageId = lastReadMessages[userId];
-      
-      if (userMessages.length > 0) {
-        // If no last read message, consider all messages as potentially unread
-        if (!lastReadMessageId) {
-          // Count messages from other users (not sent by current user)
-          const unreadCount = userMessages.filter(msg => 
-            msg.sender.id !== currentUser?.id
-          ).length;
-          if (unreadCount > 0) {
-            newUnreadMessages[userId] = unreadCount;
-          }
-        } else {
-          // Count messages after the last read message
-          const lastReadIndex = userMessages.findIndex(msg => msg.id === lastReadMessageId);
-          if (lastReadIndex !== -1) {
-            const unreadCount = userMessages.slice(lastReadIndex + 1).filter(msg => 
-              msg.sender.id !== currentUser?.id
-            ).length;
-            if (unreadCount > 0) {
-              newUnreadMessages[userId] = unreadCount;
-            }
-          }
-        }
-      }
-    });
-    
-    setUnreadMessages(newUnreadMessages);
-  }, [messages, lastReadMessages, currentUser]);
 
   const handleWebSocketMessage = (data) => {
     switch (data.type) {
@@ -145,9 +151,8 @@ function Chat() {
       
       case 'message_received':
         console.log('Message received:', data.message);
-        // Add the received message to the state
-        if (data.message?.sender?.id && data.message?.receiver?.id) {
-          // Determine which user's conversation this message belongs to
+        if (data.message?.sender?.id && data.message?.receiver?.id && !processedMessageIds.has(data.message.id)) {
+          setProcessedMessageIds(prev => new Set([...prev, data.message.id]));
           const otherUserId = data.message.sender.id === currentUser?.id 
             ? data.message.receiver.id 
             : data.message.sender.id;
@@ -156,11 +161,22 @@ function Chat() {
             userId: otherUserId,
             message: data.message
           }));
+
+          // Only add pulse if not in the sender's chat and message is from another user
+          if (data.message.sender.id !== currentUser?.id && (!selectedUser || selectedUser.id !== otherUserId)) {
+            setUnreadMessages(prev => ({
+              ...prev,
+              [otherUserId]: (prev[otherUserId] || 0) + 1
+            }));
+          }
         }
         break;
       
       case 'message_sent':
         console.log('Message sent confirmation:', data.message);
+        if (data.message?.id && !processedMessageIds.has(data.message.id)) {
+          setProcessedMessageIds(prev => new Set([...prev, data.message.id]));
+        }
         break;
       
       case 'typing_indicator':
@@ -184,7 +200,6 @@ function Chat() {
       const updated = { ...prev };
       if (is_typing) {
         updated[sender_id] = true;
-        // Clear typing indicator after 3 seconds
         if (typingTimeoutRef.current[sender_id]) {
           clearTimeout(typingTimeoutRef.current[sender_id]);
         }
@@ -209,7 +224,6 @@ function Chat() {
     setSelectedUser(user);
     setError('');
 
-     // Mark messages as read when selecting a chat
     const userMessages = messages[user.id] || [];
     if (userMessages.length > 0) {
       const lastMessage = userMessages[userMessages.length - 1];
@@ -219,14 +233,12 @@ function Chat() {
       }));
     }
     
-    // Clear unread count for this user
     setUnreadMessages(prev => {
       const updated = { ...prev };
       delete updated[user.id];
       return updated;
     });
 
-    // Load message history
     dispatch(fetchMessageHistory(user.id));
   };
 
@@ -248,9 +260,8 @@ function Chat() {
       content: messageContent
     };
 
-    // Create optimistic message object for immediate UI update
     const optimisticMessage = {
-      id: `temp_${Date.now()}`, // Temporary ID until server confirms
+      id: `temp_${Date.now()}`,
       content: messageContent,
       sender: {
         id: currentUser.id,
@@ -261,10 +272,9 @@ function Chat() {
         username: selectedUser.username
       },
       timestamp: new Date().toISOString(),
-      is_optimistic: true // Flag to identify optimistic messages
+      is_optimistic: true
     };
 
-    // Add message to state immediately (optimistic update)
     dispatch(addMessage({
       userId: selectedUser.id,
       message: optimisticMessage
@@ -274,7 +284,6 @@ function Chat() {
     socket.send(JSON.stringify(messageData));
     setMessageInput('');
     
-    // Stop typing indicator
     sendTypingIndicator(false);
   };
 
@@ -293,10 +302,8 @@ function Chat() {
   const handleInputChange = (e) => {
     setMessageInput(e.target.value);
     
-    // Send typing indicator
     sendTypingIndicator(true);
     
-    // Clear previous timeout and set new one
     if (typingTimeoutRef.current.own) {
       clearTimeout(typingTimeoutRef.current.own);
     }
@@ -312,7 +319,6 @@ function Chat() {
 
   const currentMessages = selectedUser ? messages[selectedUser.id] || [] : [];
 
-  // Show loading state if not authenticated yet
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -326,7 +332,6 @@ function Chat() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex">
-      {/* Users Sidebar */}
       <div className="w-1/4 bg-white shadow-xl border-r border-gray-200 flex flex-col">
         <div className="p-4 bg-indigo-600 text-white">
           <div className="flex items-center space-x-2">
@@ -373,16 +378,8 @@ function Chat() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      {/* Notification dot for unread messages */}
                       {unreadMessages[user.id] > 0 && (
-                        <div className="relative">
-                          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                          {unreadMessages[user.id] > 1 && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                              {unreadMessages[user.id] > 9 ? '9+' : unreadMessages[user.id]}
-                            </div>
-                          )}
-                        </div>
+                        <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
                       )}
                       <div>
                         <h3 className="font-medium text-gray-900">{user.username}</h3>
@@ -406,11 +403,9 @@ function Chat() {
         </div>
       </div>
 
-      {/* Chat Area */}
       <div className="flex-1 flex flex-col">
         {selectedUser ? (
           <>
-            {/* Chat Header */}
             <div className="bg-white shadow-sm border-b border-gray-200 p-4">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-semibold">
@@ -423,7 +418,6 @@ function Chat() {
               </div>
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-scroll p-4 space-y-4">
               {currentMessages.length === 0 ? (
                 <div className="text-center text-gray-500 mt-8">
@@ -443,7 +437,7 @@ function Chat() {
                         message.sender.id === currentUser?.id
                           ? 'bg-indigo-600 text-white'
                           : 'bg-white shadow-md border border-gray-200'
-                      } ${message.is_optimistic ? 'opacity-100' : ''}`} 
+                      } ${message.is_optimistic ? 'opacity-100' : ''}`}
                     >
                       <p className="text-sm">{message.content}</p>
                       <p
@@ -454,9 +448,6 @@ function Chat() {
                         }`}
                       >
                         {new Date(message.timestamp).toLocaleTimeString()}
-                        {/* {message.is_optimistic && (
-                          <span className="ml-1">●</span> // Indicator for pending messages
-                        )} */}
                       </p>
                     </div>
                   </div>
@@ -476,7 +467,6 @@ function Chat() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message Input */}
             <div className="bg-white border-t border-gray-200 p-4">
               <div className="flex space-x-2">
                 <input
