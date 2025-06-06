@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const axiosInstance = axios.create({
-  baseURL: 'https://voxta-backend.nikhilrajpk.in/api/',
+  baseURL: 'https://voxta-service-949877042975.us-central1.run.app/api/',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',

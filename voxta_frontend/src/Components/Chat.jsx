@@ -71,7 +71,7 @@ function Chat() {
         socketRef.current = null;
       }
 
-      const wsUrl = `wss://voxta-backend.nikhilrajpk.in/ws/chat/?token=${token}`;
+      const wsUrl = `wss://voxta-service-949877042975.us-central1.run.app/ws/chat/?token=${token}`;
       console.log('Connecting to WebSocket:', wsUrl);
       const newSocket = new WebSocket(wsUrl);
 
