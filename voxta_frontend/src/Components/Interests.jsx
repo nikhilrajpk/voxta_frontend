@@ -21,11 +21,16 @@ function Interests() {
   }, [dispatch, isAuthenticated, navigate]);
 
   const handleAction = async (interestId, action) => {
-    try {
-      await dispatch(updateInterest({ id: interestId, action })).unwrap();
-      dispatch(clearError());
-    } catch (err) {
-      console.error(`Failed to ${action} interest:`, err);
+    const actionText = action === 'accept' ? 'accept' : 'reject';
+    const confirmMessage = `Are you sure you want to ${actionText} this interest?`;
+    
+    if (window.confirm(confirmMessage)) {
+      try {
+        await dispatch(updateInterest({ id: interestId, action })).unwrap();
+        dispatch(clearError());
+      } catch (err) {
+        console.error(`Failed to ${action} interest:`, err);
+      }
     }
   };
 

@@ -249,6 +249,7 @@ function Register() {
       localStorage.setItem('refresh_token', result.refresh); 
       dispatch(clearError());
       navigate('/');
+      alert('Logged in successfully.')
     } catch (err) {
       console.error('Registration failed:', err);
       const userFriendlyError = getErrorMessage(err);
